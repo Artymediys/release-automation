@@ -12,7 +12,6 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
-// glpat-kCRtN7eT8oLzVb3EsdU6
 func Run() {
 	///////////////////////////////////
 	////////// CONFIGURATION //////////
