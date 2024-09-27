@@ -76,9 +76,10 @@ func Run() {
 		fullVersion  string
 		buildVersion string
 		comment      string
+		confirm      bool
 	)
 
-	err = cli.QA(glc, &projectIDs, &projectNames, &group, &sourceBranch, &targetBranch, &fullVersion, &buildVersion, &comment)
+	err = cli.QA(glc, &projectIDs, &projectNames, &group, &sourceBranch, &targetBranch, &fullVersion, &buildVersion, &comment, &confirm)
 	if err != nil {
 		log.Println(err)
 		return

@@ -18,6 +18,7 @@ func QA(
 	glc *gitlab.Client,
 	projectIDs, projectNames *[]string,
 	group, sourceBranch, targetBranch, fullVersion, buildVersion, comment *string,
+	confirm *bool,
 ) error {
 	var (
 		groupForm *huh.Group
@@ -91,8 +92,17 @@ func QA(
 	/////////////////////////////////////
 	/////////// ПОДТВЕРЖДЕНИЕ ///////////
 	/////////////////////////////////////
-	//log.Println("утверждаем выбор пользователя...")
-	//err = huh.NewForm()
+	log.Println("утверждаем выбор пользователя...")
+	err = huh.NewForm(
+		AskForAcknowledgement(confirm, projectNames, group, sourceBranch, targetBranch, fullVersion, comment),
+	).Run()
+	if err != nil {
+		return fmt.Errorf(ErrorForm+"%w", err)
+	}
+
+	if *confirm == false {
+		return fmt.Errorf("выбор не был утверждён")
+	}
 
 	return nil
 }
