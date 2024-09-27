@@ -15,18 +15,22 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
-func CheckAndUpdateVersion(glc *gitlab.Client, projectID, branch, comment string, updateVersion *string) error {
+func CheckAndUpdateVersion(
+	glc *gitlab.Client,
+	projectID, branch, comment, updateBuildVersion string,
+	updateFullVersion *string,
+) error {
 	content, err := getChangelogContent(glc, projectID, branch)
 	if err != nil {
 		return err
 	}
 
 	lastVersion := getLastVersion(content)
-	newVersion, err := generateNewVersion(lastVersion, *updateVersion)
+	newVersion, err := generateNewVersion(lastVersion, *updateFullVersion, updateBuildVersion)
 	if err != nil {
 		return err
 	}
-	*updateVersion = newVersion
+	*updateFullVersion = newVersion
 
 	if comment == "" {
 		osUser, err := user.Current()
@@ -117,7 +121,7 @@ func getLastVersion(content string) string {
 	return ""
 }
 
-func generateNewVersion(lastVersion, updateVersion string) (string, error) {
+func generateNewVersion(lastVersion, updateFullVersion, updateBuildVersion string) (string, error) {
 	re := regexp.MustCompile(`^(\d+)\.(\d+)\.(\d+)$`)
 	matches := re.FindStringSubmatch(lastVersion)
 	if matches == nil {
@@ -128,17 +132,16 @@ func generateNewVersion(lastVersion, updateVersion string) (string, error) {
 	minor, _ := strconv.Atoi(matches[2])
 	build, _ := strconv.Atoi(matches[3])
 
-	switch updateVersion {
+	switch updateFullVersion {
 	case "":
-		newBuild := time.Now().Format("0601021504")
-		return fmt.Sprintf("%d.%d.%s", major, minor, newBuild), nil
+		return fmt.Sprintf("%d.%d.%s", major, minor, updateBuildVersion), nil
 	default:
-		newVersionParts := strings.Split(updateVersion, ".")
+		newVersionParts := strings.Split(updateFullVersion, ".")
 
 		if len(newVersionParts) == 1 {
 			newBuild, err := strconv.Atoi(newVersionParts[0])
 			if err != nil {
-				return "", fmt.Errorf("версия указано в некорректном формате -> %s", updateVersion)
+				return "", fmt.Errorf("версия указана в некорректном формате -> %s", updateFullVersion)
 			}
 
 			if newBuild <= build {
@@ -153,17 +156,17 @@ func generateNewVersion(lastVersion, updateVersion string) (string, error) {
 			newMinor, minorErr := strconv.Atoi(newVersionParts[1])
 			newBuild, buildErr := strconv.Atoi(newVersionParts[2])
 			if majorErr != nil || minorErr != nil || buildErr != nil {
-				return "", fmt.Errorf("версия указано в некорректном формате -> %s", updateVersion)
+				return "", fmt.Errorf("версия указано в некорректном формате -> %s", updateFullVersion)
 			}
 
 			if newMajor < major || (newMajor == major && newMinor < minor) || (newMajor == major && newMinor == minor && newBuild <= build) {
 				return "", fmt.Errorf("новая версия должна быть больше предыдущей версии -> %s", lastVersion)
 			}
 
-			return updateVersion, nil
+			return updateFullVersion, nil
 		}
 
-		return "", fmt.Errorf("версия указано в некорректном формате -> %s", updateVersion)
+		return "", fmt.Errorf("версия указана в некорректном формате -> %s", updateFullVersion)
 	}
 }
 

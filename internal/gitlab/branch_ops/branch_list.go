@@ -2,6 +2,8 @@ package branch_ops
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/xanzy/go-gitlab"
 )
@@ -35,6 +37,18 @@ func GetCommonBranches(glc *gitlab.Client, projectIDs []string) ([]string, error
 			commonBranches = append(commonBranches, branch)
 		}
 	}
+
+	sort.Slice(commonBranches, func(i, j int) bool {
+		branch1, branch2 := commonBranches[i], commonBranches[j]
+		branch1HasSlash := strings.Contains(branch1, "/")
+		branch2HasSlash := strings.Contains(branch2, "/")
+
+		if branch1HasSlash != branch2HasSlash {
+			return !branch1HasSlash
+		}
+
+		return strings.ToLower(branch1) < strings.ToLower(branch2)
+	})
 
 	return commonBranches, nil
 }

@@ -2,6 +2,8 @@ package cli
 
 import (
 	"fmt"
+	"log"
+	"time"
 
 	"arel/internal/gitlab/branch_ops"
 	"arel/internal/gitlab/repo_ops"
@@ -12,12 +14,11 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
-var (
-	ErrorSpinner = "возникла ошибка при отображении интерфейса загрузки -> "
-	ErrorForm    = "возникла ошибка при отображении пользовательского интерфейса -> "
-)
-
-func QA(glc *gitlab.Client, projectIDs, projectNames *[]string, group, sourceBranch, targetBranch, version, comment *string) error {
+func QA(
+	glc *gitlab.Client,
+	projectIDs, projectNames *[]string,
+	group, sourceBranch, targetBranch, fullVersion, buildVersion, comment *string,
+) error {
 	var (
 		groupForm *huh.Group
 		groupErr  error
@@ -26,6 +27,7 @@ func QA(glc *gitlab.Client, projectIDs, projectNames *[]string, group, sourceBra
 	////////////////////////////////////
 	///////// ГРУППЫ И ПРОЕКТЫ /////////
 	////////////////////////////////////
+	log.Println("получаем данные о проектах...")
 	err := spinner.New().
 		Title("Получаем данные о проектах...").
 		Action(func() {
@@ -51,6 +53,7 @@ func QA(glc *gitlab.Client, projectIDs, projectNames *[]string, group, sourceBra
 	///////////////////////////////////
 	////////////// ВЕТКИ //////////////
 	///////////////////////////////////
+	log.Println("получаем данные о ветках проектов...")
 	err = spinner.New().
 		Title("Получаем данные о ветках проектов...").
 		Action(func() {
@@ -75,71 +78,101 @@ func QA(glc *gitlab.Client, projectIDs, projectNames *[]string, group, sourceBra
 	////////////////////////////////////
 	////////////// ВЕРСИЯ //////////////
 	////////////////////////////////////
-	err = huh.NewForm(AskForVersion(version, comment)).Run()
+	log.Println("получаем данные о новой версии...")
+	err = huh.NewForm(AskForVersion(fullVersion, comment)).Run()
 	if err != nil {
 		return fmt.Errorf(ErrorForm+"%w", err)
 	}
 
+	if *fullVersion == "" {
+		*buildVersion = time.Now().Format("0601021504")
+	}
+
+	/////////////////////////////////////
+	/////////// ПОДТВЕРЖДЕНИЕ ///////////
+	/////////////////////////////////////
+	//log.Println("утверждаем выбор пользователя...")
+	//err = huh.NewForm()
+
 	return nil
 }
 
-func Action(glc *gitlab.Client, projectID, projectName, sourceBranch, targetBranch, version, comment string) error {
+func Action(
+	glc *gitlab.Client,
+	projectID, projectName, sourceBranch, targetBranch, comment, fullVersion, buildVersion string,
+) (Stage, error) {
 	var (
 		gitlabErr error
 		spinErr   error
+
+		stageStatus Stage
 	)
 
 	///////////////////////////////////
 	///// ОБНОВЛЕНИЕ CHANGELOG.md /////
 	///////////////////////////////////
+	log.Println(fmt.Sprintf("обновляем CHANGELOG.md в \"%s\"...", projectName))
 	spinErr = spinner.New().
 		Title(fmt.Sprintf("Обновляем CHANGELOG.md в \"%s\"...", projectName)).
 		Action(func() {
-			gitlabErr = version_ops.CheckAndUpdateVersion(glc, projectID, sourceBranch, comment, &version)
+			gitlabErr = version_ops.CheckAndUpdateVersion(glc, projectID, sourceBranch, comment, buildVersion, &fullVersion)
 		}).Run()
 	if spinErr != nil {
-		return fmt.Errorf(ErrorSpinner+"%w", spinErr)
+		stageStatus.Changelog = -1
+		return stageStatus, fmt.Errorf(ErrorSpinner+"%w", spinErr)
 	}
 	if gitlabErr != nil {
-		return gitlabErr
+		stageStatus.Changelog = -1
+		return stageStatus, gitlabErr
 	}
+
+	stageStatus.Changelog = 1
 
 	////////////////////////////////////
 	////////// СЛИЯЕНИЕ ВЕТОК //////////
 	////////////////////////////////////
+	log.Println(fmt.Sprintf("сливаем ветки \"%s\" -> \"%s\"...", sourceBranch, targetBranch))
 	spinErr = spinner.New().
-		Title("Сливаем ветки...").
+		Title(fmt.Sprintf("Сливаем ветки \"%s\" -> \"%s\"...", sourceBranch, targetBranch)).
 		Action(func() {
-			switch targetBranch {
-			case "main", "master":
+			if (targetBranch == "main" || targetBranch == "master") && targetBranch != sourceBranch {
 				gitlabErr = branch_ops.MergeBranches(glc, projectID, sourceBranch, targetBranch)
-			default:
+			} else {
 				gitlabErr = branch_ops.ForcePushBranch(glc, projectID, sourceBranch, targetBranch)
 			}
 		}).Run()
 	if spinErr != nil {
-		return fmt.Errorf(ErrorSpinner+"%w", spinErr)
+		stageStatus.MergePush = -1
+		return stageStatus, fmt.Errorf(ErrorSpinner+"%w", spinErr)
 	}
 	if gitlabErr != nil {
-		return gitlabErr
+		stageStatus.MergePush = -1
+		return stageStatus, gitlabErr
 	}
+
+	stageStatus.MergePush = 1
 
 	///////////////////////////////////
 	////////// СОЗДАНИЕ ТЕГА //////////
 	///////////////////////////////////
+	log.Println("формируем тег...")
 	if targetBranch != "main" && targetBranch != "master" {
 		spinErr = spinner.New().
 			Title("Формируем тег...").
 			Action(func() {
-				gitlabErr = version_ops.CreateTag(glc, projectID, targetBranch, version)
+				gitlabErr = version_ops.CreateTag(glc, projectID, targetBranch, fullVersion)
 			}).Run()
 		if spinErr != nil {
-			return fmt.Errorf(ErrorSpinner+"%w", spinErr)
+			stageStatus.Tag = -1
+			return stageStatus, fmt.Errorf(ErrorSpinner+"%w", spinErr)
 		}
 		if gitlabErr != nil {
-			return gitlabErr
+			stageStatus.Tag = -1
+			return stageStatus, gitlabErr
 		}
+
+		stageStatus.Tag = 1
 	}
 
-	return nil
+	return stageStatus, nil
 }

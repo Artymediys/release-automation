@@ -5,7 +5,7 @@ import (
 	"os"
 
 	"arel/internal/gitlab/repo_ops"
-	"arel/utils"
+	"arel/pkg/utils"
 
 	"github.com/spf13/viper"
 	"github.com/xanzy/go-gitlab"

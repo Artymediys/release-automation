@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+
 	"github.com/charmbracelet/huh"
 	"github.com/xanzy/go-gitlab"
 )
@@ -41,12 +42,6 @@ func AskForBranches(
 			Title("Выберите целевую ветку").
 			Value(targetBranch).
 			Height(len(branches)+2).
-			Options(huh.NewOptions(branches...)...).
-			Validate(func(chosenBranch string) error {
-				if chosenBranch == *sourceBranch {
-					return fmt.Errorf("исходная ветка %s совпадает с целевой веткой %s", chosenBranch, *sourceBranch)
-				}
-				return nil
-			}),
+			Options(huh.NewOptions(branches...)...),
 	), nil
 }

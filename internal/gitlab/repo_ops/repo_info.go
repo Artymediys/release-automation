@@ -3,6 +3,7 @@ package repo_ops
 import (
 	"fmt"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -23,9 +24,37 @@ func GetGroupProjectMap(glc *gitlab.Client) (map[string][]string, error) {
 			return nil, err
 		}
 
-		projectNames := make([]string, 0, 50)
+		projectInfos := make([]struct {
+			ShortName string
+			FullName  string
+		}, 0, len(projects))
+
+		maxShortNameLen := 0
 		for _, project := range projects {
-			projectNames = append(projectNames, project.Name)
+			shortName := getProjectPath(project)
+			fullName := project.Name
+
+			if len(shortName) > maxShortNameLen {
+				maxShortNameLen = len(shortName)
+			}
+
+			projectInfos = append(projectInfos, struct {
+				ShortName string
+				FullName  string
+			}{
+				ShortName: shortName,
+				FullName:  fullName,
+			})
+		}
+
+		sort.Slice(projectInfos, func(i, j int) bool {
+			return strings.ToLower(projectInfos[i].ShortName) < strings.ToLower(projectInfos[j].ShortName)
+		})
+
+		projectNames := make([]string, 0, len(projectInfos))
+		for _, project := range projectInfos {
+			formattedNames := fmt.Sprintf("%-*s| %s", maxShortNameLen+2, project.ShortName, project.FullName)
+			projectNames = append(projectNames, formattedNames)
 		}
 
 		groupProjectMap[group.Name] = projectNames
@@ -35,20 +64,25 @@ func GetGroupProjectMap(glc *gitlab.Client) (map[string][]string, error) {
 }
 
 func GetProjectID(glc *gitlab.Client, projectName string) (string, error) {
+	_, fullProjectName, err := getSplitProjectName(projectName)
+	if err != nil {
+		return "", fmt.Errorf("не удалось получить полное имя проекта -> %w", err)
+	}
+
 	projects, _, err := glc.Projects.ListProjects(&gitlab.ListProjectsOptions{
-		Search: &projectName,
+		Search: &fullProjectName,
 	})
 	if err != nil {
 		return "", fmt.Errorf("не удалось получить список проектов -> %w", err)
 	}
 
 	for _, project := range projects {
-		if project.Name == projectName {
+		if project.Name == fullProjectName {
 			return strconv.Itoa(project.ID), nil
 		}
 	}
 
-	return "", fmt.Errorf("не удалось найти указанный проект -> %s", projectName)
+	return "", fmt.Errorf("не удалось найти указанный проект -> %s", fullProjectName)
 }
 
 func GetProjectURL(glc *gitlab.Client, projectID string) (string, string, error) {
@@ -77,6 +111,10 @@ func GetGroupNames(gls *gitlab.Client) ([]string, error) {
 	for _, group := range groups {
 		groupNames = append(groupNames, group.Name)
 	}
+
+	sort.Slice(groupNames, func(i, j int) bool {
+		return strings.ToLower(groupNames[i]) < strings.ToLower(groupNames[j])
+	})
 
 	return groupNames, nil
 }
@@ -185,24 +223,20 @@ func getProjectsInGroup(glc *gitlab.Client, groupID int) ([]*gitlab.Project, err
 	return allProjects, nil
 }
 
-//func GetProjectIDMap(glc *gitlab.Client) (map[string]int, error) {
-//	projectIDMap := make(map[string]int, 100)
-//
-//	groups, err := getGroupsAndSubgroups(glc)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	for _, group := range groups {
-//		projects, err := getProjectsInGroup(glc, group.ID)
-//		if err != nil {
-//			return nil, err
-//		}
-//
-//		for _, project := range projects {
-//			projectIDMap[project.Name] = project.ID
-//		}
-//	}
-//
-//	return projectIDMap, nil
-//}
+func getProjectPath(project *gitlab.Project) string {
+	urlParts := strings.Split(project.WebURL, "/")
+	return urlParts[len(urlParts)-1]
+}
+
+func getSplitProjectName(projectName string) (string, string, error) {
+	nameParts := strings.SplitN(projectName, "|", 2)
+
+	if len(nameParts) == 2 {
+		shortName := strings.TrimSpace(nameParts[0])
+		fullName := strings.TrimSpace(nameParts[1])
+
+		return shortName, fullName, nil
+	}
+
+	return "", "", fmt.Errorf("некорректный формат строки с названиями проекта -> %s", projectName)
+}
