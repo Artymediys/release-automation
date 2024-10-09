@@ -22,14 +22,14 @@ func AskForBranches(
 	for i, projectName := range *projectNames {
 		projectID, err := getProjectID(glc, projectName)
 		if err != nil {
-			return nil, fmt.Errorf("не удалось получить ID для проекта %s -> %w", projectName, err)
+			return nil, fmt.Errorf("не удалось получить ID проекта -> %w", err)
 		}
 		(*projectIDs)[i] = projectID
 	}
 
 	branches, err := getCommonBranches(glc, *projectIDs)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось получить общие ветки проектов: %v", err)
+		return nil, fmt.Errorf("не удалось получить общие ветки проектов -> %w", err)
 	}
 
 	return huh.NewGroup(

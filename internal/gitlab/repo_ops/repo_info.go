@@ -77,7 +77,7 @@ func GetProjectID(glc *gitlab.Client, projectName string) (string, error) {
 	}
 
 	for _, project := range projects {
-		if project.Name == fullProjectName {
+		if strings.TrimSpace(project.Name) == fullProjectName {
 			return strconv.Itoa(project.ID), nil
 		}
 	}

@@ -19,10 +19,14 @@ func AskForAcknowledgement(
 
 	if *fullVersion == "" {
 		versionMessage = "не была указана, поэтому будет сформирована автоматически"
+	} else {
+		versionMessage = *fullVersion
 	}
 
 	if *comment == "" {
 		commentMessage = "не был указан, поэтому будет сформирован автоматически"
+	} else {
+		commentMessage = *comment
 	}
 
 	for _, projectName := range *projectNames {
