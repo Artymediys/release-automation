@@ -85,6 +85,7 @@ func Run() {
 		return
 	}
 
+	var resultString string
 	for i := 0; i < len(projectIDs); i++ {
 		projectName := strings.Join(strings.Fields(projectNames[i]), " ")
 
@@ -93,11 +94,12 @@ func Run() {
 			log.Println(err)
 		}
 
-		_, err = reportFile.WriteString(fmt.Sprintf(
+		resultString += fmt.Sprintf(
 			"Рапорт от: %s\nПроект: %s\nИзменение CHANGELOD.md - %s\nMerge / Force Push – %s\nСоздание тега – %s\n\n",
 			time.Now().Format(time.DateTime), projectName,
 			appStage.Changelog.Status(), appStage.MergePush.Status(), appStage.Tag.Status(),
-		))
+		)
+		_, err = reportFile.WriteString(resultString)
 		if err != nil {
 			log.Println("не удалось записать рапорт в файл ->", err)
 		}
@@ -112,6 +114,8 @@ func Run() {
 			log.Println(cli.ErrorSpinner+"%w", spinErr)
 		}
 	}
+
+	fmt.Println(resultString)
 
 	log.Println("ARel: полёт закончен!")
 }

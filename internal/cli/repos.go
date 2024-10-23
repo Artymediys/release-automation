@@ -27,12 +27,12 @@ func AskForProjects(
 		huh.NewSelect[string]().
 			Title("Выберите группу").
 			Value(group).
-			Height(len(groups)+2).
+			Height(8).
 			Options(huh.NewOptions(groups...)...),
 		huh.NewMultiSelect[string]().
 			Title("Выберите проекты/репозитории").
 			Value(projectNames).
-			Height(32).
+			Height(12).
 			OptionsFunc(func() []huh.Option[string] {
 				groupProjects := projects[*group]
 				return huh.NewOptions(groupProjects...)

@@ -36,12 +36,12 @@ func AskForBranches(
 		huh.NewSelect[string]().
 			Title("Выберите исходную ветку").
 			Value(sourceBranch).
-			Height(len(branches)+2).
+			Height(8).
 			Options(huh.NewOptions(branches...)...),
 		huh.NewSelect[string]().
 			Title("Выберите целевую ветку").
 			Value(targetBranch).
-			Height(len(branches)+2).
+			Height(8).
 			Options(huh.NewOptions(branches...)...),
 	), nil
 }

@@ -14,6 +14,8 @@ import (
 	"github.com/xanzy/go-gitlab"
 )
 
+var cliTheme = huh.ThemeBase()
+
 func QA(
 	glc *gitlab.Client,
 	projectIDs, projectNames *[]string,
@@ -42,7 +44,7 @@ func QA(
 		return fmt.Errorf("возникла ошибка при формировании интерфейса для групп и проектов -> %w", groupErr)
 	}
 
-	err = huh.NewForm(groupForm).Run()
+	err = huh.NewForm(groupForm).WithTheme(cliTheme).Run()
 	if err != nil {
 		return fmt.Errorf(ErrorForm+"%w", err)
 	}
@@ -71,7 +73,7 @@ func QA(
 		return fmt.Errorf("возникла ошибка при формировании интерфейса для веток проекта -> %w", groupErr)
 	}
 
-	err = huh.NewForm(groupForm).Run()
+	err = huh.NewForm(groupForm).WithTheme(cliTheme).Run()
 	if err != nil {
 		return fmt.Errorf(ErrorForm+"%w", err)
 	}
@@ -80,7 +82,7 @@ func QA(
 	////////////// ВЕРСИЯ //////////////
 	////////////////////////////////////
 	log.Println("получаем данные о новой версии...")
-	err = huh.NewForm(AskForVersion(fullVersion, comment)).Run()
+	err = huh.NewForm(AskForVersion(fullVersion, comment)).WithTheme(cliTheme).Run()
 	if err != nil {
 		return fmt.Errorf(ErrorForm+"%w", err)
 	}
@@ -95,7 +97,7 @@ func QA(
 	log.Println("утверждаем выбор пользователя...")
 	err = huh.NewForm(
 		AskForAcknowledgement(confirm, projectNames, group, sourceBranch, targetBranch, fullVersion, comment),
-	).Run()
+	).WithTheme(cliTheme).Run()
 	if err != nil {
 		return fmt.Errorf(ErrorForm+"%w", err)
 	}

@@ -13,7 +13,7 @@ func NewLogger() (*os.File, error) {
 	}
 	execDir := filepath.Dir(execPath)
 
-	logFilePath := filepath.Join(execDir, "logs", "arel.log")
+	logFilePath := filepath.Join(execDir, "logs", "arel_main.log")
 	logDir := filepath.Dir(logFilePath)
 
 	err = os.MkdirAll(logDir, 0777)
