@@ -45,7 +45,7 @@ func Run() {
 			gitlabPAT string
 		)
 
-		err = huh.NewForm(cli.AskForConfig(&gitlabURL, &gitlabPAT)).Run()
+		err = huh.NewForm(cli.AskForConfig(&gitlabURL, &gitlabPAT)).WithTheme(huh.ThemeBase()).Run()
 		if err != nil {
 			log.Println(cli.ErrorForm, err)
 			return
