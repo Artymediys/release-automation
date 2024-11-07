@@ -31,6 +31,7 @@ func Run() {
 	reportFile, err := report.NewReporter()
 	if err != nil {
 		log.Println("не удалось настроить репортера -> ", err)
+		fmt.Println("не удалось настроить репортера -> ", err)
 		return
 	}
 	defer reportFile.Close()
@@ -48,12 +49,14 @@ func Run() {
 		err = huh.NewForm(cli.AskForConfig(&gitlabURL, &gitlabPAT)).WithTheme(huh.ThemeBase()).Run()
 		if err != nil {
 			log.Println(cli.ErrorForm, err)
+			fmt.Println(cli.ErrorForm, err)
 			return
 		}
 
 		err = config.Create(gitlabURL, gitlabPAT)
 		if err != nil {
 			log.Println("не удалось создать конфиг -> ", err)
+			fmt.Println("не удалось создать конфиг -> ", err)
 			return
 		}
 	}
@@ -61,6 +64,7 @@ func Run() {
 	glc, err := gitlab.NewClient(viper.GetString("pat"), gitlab.WithBaseURL(viper.GetString("url")))
 	if err != nil {
 		log.Println("не удалось создать клиент для взаимодействия с GitLab API -> ", err)
+		fmt.Println("не удалось создать клиент для взаимодействия с GitLab API -> ", err)
 		return
 	}
 
@@ -82,6 +86,7 @@ func Run() {
 	err = cli.QA(glc, &projectIDs, &projectNames, &group, &sourceBranch, &targetBranch, &fullVersion, &buildVersion, &comment, &confirm)
 	if err != nil {
 		log.Println(err)
+		fmt.Println(err)
 		return
 	}
 

@@ -103,7 +103,7 @@ func QA(
 	}
 
 	if *confirm == false {
-		return fmt.Errorf("выбор не был утверждён")
+		return fmt.Errorf("ARel: выбор не был утверждён")
 	}
 
 	return nil
@@ -143,32 +143,34 @@ func Action(
 	////////////////////////////////////
 	////////// СЛИЯЕНИЕ ВЕТОК //////////
 	////////////////////////////////////
-	log.Println(fmt.Sprintf("сливаем ветки \"%s\" -> \"%s\"...", sourceBranch, targetBranch))
-	spinErr = spinner.New().
-		Title(fmt.Sprintf("Сливаем ветки \"%s\" -> \"%s\"...", sourceBranch, targetBranch)).
-		Action(func() {
-			if (targetBranch == "main" || targetBranch == "master") && targetBranch != sourceBranch {
-				gitlabErr = branch_ops.MergeBranches(glc, projectID, sourceBranch, targetBranch)
-			} else {
-				gitlabErr = branch_ops.ForcePushBranch(glc, projectID, sourceBranch, targetBranch)
-			}
-		}).Run()
-	if spinErr != nil {
-		stageStatus.MergePush = -1
-		return stageStatus, fmt.Errorf(ErrorSpinner+"%w", spinErr)
-	}
-	if gitlabErr != nil {
-		stageStatus.MergePush = -1
-		return stageStatus, gitlabErr
-	}
+	if targetBranch != sourceBranch {
+		log.Println(fmt.Sprintf("сливаем ветки \"%s\" -> \"%s\"...", sourceBranch, targetBranch))
+		spinErr = spinner.New().
+			Title(fmt.Sprintf("Сливаем ветки \"%s\" -> \"%s\"...", sourceBranch, targetBranch)).
+			Action(func() {
+				if targetBranch == "main" || targetBranch == "master" {
+					gitlabErr = branch_ops.MergeBranches(glc, projectID, sourceBranch, targetBranch)
+				} else {
+					gitlabErr = branch_ops.ForcePushBranch(glc, projectID, sourceBranch, targetBranch)
+				}
+			}).Run()
+		if spinErr != nil {
+			stageStatus.MergePush = -1
+			return stageStatus, fmt.Errorf(ErrorSpinner+"%w", spinErr)
+		}
+		if gitlabErr != nil {
+			stageStatus.MergePush = -1
+			return stageStatus, gitlabErr
+		}
 
-	stageStatus.MergePush = 1
+		stageStatus.MergePush = 1
+	}
 
 	///////////////////////////////////
 	////////// СОЗДАНИЕ ТЕГА //////////
 	///////////////////////////////////
-	log.Println("формируем тег...")
 	if targetBranch != "main" && targetBranch != "master" {
+		log.Println("формируем тег...")
 		spinErr = spinner.New().
 			Title("Формируем тег...").
 			Action(func() {
